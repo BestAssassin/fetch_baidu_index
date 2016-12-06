@@ -34,8 +34,10 @@ class BaiduBrowser(object):
         self.cookie_json = cookie_json
         self.api = None
         self.cookie_dict_list = []
+        self.date_list = []
 
         self.init_api(check_login=check_login)
+        self.init_date_list()
 
     def __del__(self):
         self.close()
@@ -115,6 +117,8 @@ class BaiduBrowser(object):
         self.browser.get(url)
         if ini_config.browser_sleep:
             time.sleep(float(ini_config.browser_sleep))
+        if u'未被收录' in self.browser.page_source:
+            return {}
         # 执行js获取后面所需的res和res2的值
         res = self.browser.execute_script('return PPval.ppt;')
         res2 = self.browser.execute_script('return PPval.res2;')
@@ -156,10 +160,10 @@ class BaiduBrowser(object):
 
         return baidu_index_dict
 
-    def _get_index_period(self, keyword):
+    def _get_index_period(self, keyword, area):
         # 拼接一周趋势的url
         url = ini_config.one_week_trend_url.format(
-            word=urllib.quote(keyword.encode('gbk'))
+            area=area, word=urllib.quote(keyword.encode('gbk'))
         )
         self.browser.get(url)
         # 获取下方api要用到的res和res2的值
@@ -181,29 +185,34 @@ class BaiduBrowser(object):
         start_date, end_date, date_list = self.get_date_info(
             start_date, end_date
         )
-        logger.info('all_start_date:%s, all_end_date:%s' % (start_date, end_date))
+        logger.info(
+            'all_start_date:%s, all_end_date:%s' % (start_date, end_date)
+        )
         return date_list
 
-    def get_baidu_index(self, keyword, type_name, area):
+    def init_date_list(self):
         if ini_config.start_date and ini_config.end_date:
             _, _, date_list = self.get_date_info(
                 start_date=ini_config.start_date, end_date=ini_config.end_date
             )
         else:
-            # 配置文件不配置start_date和end_date，可以查询到这个关键词数据的最大区间
-            date_list = self._get_index_period(keyword)
+            # 配置文件不配置start_date和end_date，就会按照索引的最大区间来,
+            # 目前每个关键词的最大区间是一样的，都是从2011年1月1日开始的
+            date_list = self._get_index_period(keyword=u'test', area=0)
+        self.date_list = date_list
 
+    def get_baidu_index(self, keyword, type_name, area):
         baidu_index_dict = dict()
         start = 0
         skip = 180
-        end = len(date_list)
+        end = len(self.date_list)
         while start < end:
             try:
-                start_date = date_list[start]
+                start_date = self.date_list[start]
                 if start + skip >= end - 1:
-                    end_date = date_list[-1]
+                    end_date = self.date_list[-1]
                 else:
-                    end_date = date_list[start + skip]
+                    end_date = self.date_list[start + skip]
                 result = self.get_baidu_index_by_date_range(
                     keyword, start_date, end_date, type_name, area
                 )
@@ -211,7 +220,6 @@ class BaiduBrowser(object):
                 start += skip + 1
             except:
                 import traceback
-
                 print traceback.format_exc()
         return baidu_index_dict
 

@@ -80,7 +80,6 @@ def parse_one_keyword(keyword, result_folder,
             baidu_index_dict = baidu_browser.get_baidu_index(
                 keyword_unicode, type_name, area
             )
-            date_list = sorted(baidu_index_dict.keys())
 
             type_name_zh = index_type_dict.get(type_name)
             file_name = u'%s_%s_%s.xls' % (
@@ -95,8 +94,8 @@ def parse_one_keyword(keyword, result_folder,
             file_path = os.path.join(result_folder, file_name)
 
             data_list = []
-            for date in date_list:
-                value = baidu_index_dict[date]
+            for date in baidu_browser.date_list:
+                value = baidu_index_dict.get(date, 0)
                 data_list.append(
                     (keyword_unicode, date, type_name_zh, value)
                 )
