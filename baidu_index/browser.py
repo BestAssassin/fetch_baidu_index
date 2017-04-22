@@ -7,12 +7,11 @@ import json
 from datetime import datetime, timedelta
 
 from selenium import webdriver
+from threadpool import ThreadPool, makeRequests
 
 from config import ini_config
-
 from api import Api
 from utils.log import logger
-from multi_thread import WorkManager
 
 
 class BaiduBrowser(object):
@@ -22,7 +21,11 @@ class BaiduBrowser(object):
         else:
             browser_driver_name = ini_config.browser_driver
         browser_driver_class = getattr(webdriver, browser_driver_name)
-        self.browser = browser_driver_class()
+
+        if ini_config.browser_driver == 'Chrome':
+            self.browser = browser_driver_class(executable_path=ini_config.executable_path)
+        else:
+            self.browser = browser_driver_class()
         # 设置超时时间
         self.browser.set_page_load_timeout(50)
         # 设置脚本运行超时时间
@@ -55,9 +58,13 @@ class BaiduBrowser(object):
         # 判断是否需要登录
         need_login = False
         if not self.cookie_json:
+            logger.info(u'因无历史cookie，本次执行需要登录百度')
             need_login = True
         elif check_login and not self.is_login():
+            logger.info(u'加载历史cookie登录失败，本次执行需要登录百度')
             need_login = True
+        else:
+            logger.info(u'本次执行无需登录百度')
         # 执行浏览器自动填表登录，登录后获取cookie
         if need_login:
             self.login(self.user_name, self.password)
@@ -137,9 +144,11 @@ class BaiduBrowser(object):
         indexes_enc = all_index_info['data'][type_name][0]['userIndexes_enc']
         enc_list = indexes_enc.split(',')
 
-        wm = WorkManager(int(ini_config.num_of_threads))
+        pool = ThreadPool(int(ini_config.num_of_threads))
+        # wm = WorkManager(int(ini_config.num_of_threads))
 
         # 遍历这些enc值，这些值拼接出api的url(这个页面返回 图片信息以及css规定的切图信息)
+        list_of_args = []
         for index, _ in enumerate(enc_list):
             url = ini_config.index_show_url.format(
                 res=res, res2=res2, enc_index=_, t=int(time.time()) * 1000
@@ -147,16 +156,18 @@ class BaiduBrowser(object):
             # 根据enc在列表中的位置，获取它的日期
             date = date_list[index]
             # 将任务添加到多线程下载模型中
-            wm.add_job(
-                date, self.get_one_day_index, date, url, keyword,
-                type_name, area
-            )
+            item = (None, dict(date=date, url=url, keyword=keyword, type_name=type_name, area=area))
+            list_of_args.append(item)
 
-        wm.start()
-        wm.wait_for_complete()
+        baidu_index_dict = {}
 
-        # 执行结束后，从结果queue中获取到最终的百度指数字典
-        baidu_index_dict = wm.get_all_result_dict_from_queue()
+        def callback(*args, **kwargs):
+            req, val = args[0], args[1]
+            baidu_index_dict[req.kwds['date']] = val
+
+        req_list = makeRequests(self.get_one_day_index, list_of_args, callback)
+        [pool.putRequest(req) for req in req_list]
+        pool.wait()
 
         return baidu_index_dict
 
@@ -233,16 +244,16 @@ class BaiduBrowser(object):
         while 1:
             try:
                 user_name_obj = self.browser.find_element_by_id(
-                    'TANGRAM__PSP_3__userName'
+                    'TANGRAM__PSP_4__userName'
                 )
                 break
             except:
                 logger.error(traceback.format_exc())
                 time.sleep(1)
         user_name_obj.send_keys(user_name)
-        ps_obj = self.browser.find_element_by_id('TANGRAM__PSP_3__password')
+        ps_obj = self.browser.find_element_by_id('TANGRAM__PSP_4__password')
         ps_obj.send_keys(password)
-        sub_obj = self.browser.find_element_by_id('TANGRAM__PSP_3__submit')
+        sub_obj = self.browser.find_element_by_id('TANGRAM__PSP_4__submit')
         sub_obj.click()
 
         # 如果页面的url没有改变，则继续等待

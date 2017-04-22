@@ -3,6 +3,7 @@
 
 import os
 import traceback
+import sys
 
 import xlwt
 import chardet
@@ -12,10 +13,13 @@ from utils.log import logger
 from config import ini_config
 from city import final_city_dict
 
-
 index_type_dict = {
     'all': u'整体趋势', 'pc': u'PC趋势', 'wise': u'移动趋势'
 }
+if sys.platform in ['win32', 'cygwin']:
+    FILE_NAME_ENCODING = 'gbk'
+else:
+    FILE_NAME_ENCODING = 'utf-8'
 
 
 def save_cookie_to_file(cookie_json):
@@ -88,9 +92,7 @@ def parse_one_keyword(keyword, result_folder,
                 type_name_zh
             )
 
-            file_name = file_name.encode(
-                ini_config.file_name_encoding, 'ignore'
-            )
+            file_name = file_name.encode(FILE_NAME_ENCODING, 'ignore')
             file_path = os.path.join(result_folder, file_name)
 
             data_list = []
