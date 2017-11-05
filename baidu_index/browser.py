@@ -244,16 +244,16 @@ class BaiduBrowser(object):
         while 1:
             try:
                 user_name_obj = self.browser.find_element_by_id(
-                    'TANGRAM__PSP_4__userName'
+                    'TANGRAM__PSP_3__userName'
                 )
                 break
             except:
                 logger.error(traceback.format_exc())
                 time.sleep(1)
         user_name_obj.send_keys(user_name)
-        ps_obj = self.browser.find_element_by_id('TANGRAM__PSP_4__password')
+        ps_obj = self.browser.find_element_by_id('TANGRAM__PSP_3__password')
         ps_obj.send_keys(password)
-        sub_obj = self.browser.find_element_by_id('TANGRAM__PSP_4__submit')
+        sub_obj = self.browser.find_element_by_id('TANGRAM__PSP_3__submit')
         sub_obj.click()
 
         # 如果页面的url没有改变，则继续等待
