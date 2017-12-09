@@ -23,4 +23,5 @@
 
 # 运行环境
 1.linux或者是mac系统，因为操作系统内核的原因，windows下可能会出现can't start a new thread的问题
+
 2.python2.7，其他需要的模块根据提示自行安装
