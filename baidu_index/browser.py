@@ -243,6 +243,7 @@ class BaiduBrowser(object):
         # 自动填写表单并提交，如果出现验证码需要手动填写
         while 1:
             try:
+                self.browser.find_element_by_id('TANGRAM__PSP_3__userName').clear()
                 user_name_obj = self.browser.find_element_by_id(
                     'TANGRAM__PSP_3__userName'
                 )
